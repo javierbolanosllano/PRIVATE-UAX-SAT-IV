@@ -57,8 +57,6 @@ class E220:
         while not self.aux.value:
             print("Esperando que el pin AUX esté alto...")
             time.sleep(0.1)  # Reduce el uso de CPU
-        if not self.aux_message_shown:  # Solo mostrar el mensaje si no ha sido mostrado antes
-            print("El pin AUX está alto!")
 
     def send_data(self, data):
         """ Envía datos a través del puerto UART """
