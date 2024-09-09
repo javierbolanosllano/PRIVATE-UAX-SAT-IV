@@ -1,27 +1,41 @@
+"""* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*                                                                            *
+*                         Developed by Javier Bolanos                        *
+*                  https://github.com/javierbolanosllano                     *
+*                                                                            *
+*                      UAXSAT IV Project - 2024                              *
+*                   https://github.com/UAXSat/UAXSat                         *
+*                                                                            *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"""
+
+# receiver.py
 import time
-import json
-import logging
 import psycopg2
 from serial.tools import list_ports
 from e220 import E220, MODE_NORMAL, AUX, M0, M1, VID_PID_LIST
+import json
+import logging
 
-# Configuración del logger
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configuración del logger en nivel DEBUG
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 
 def find_serial_port(vendor_id, product_id):
     """Encuentra y devuelve el puerto serial para un dispositivo con el VID y PID dados"""
+    logger.debug(f"Buscando puerto serial para VID: {vendor_id}, PID: {product_id}")
     ports = list_ports.comports()
     for port in ports:
+        logger.debug(f"Comprobando puerto {port.device}, VID: {port.vid}, PID: {port.pid}")
         if port.vid == vendor_id and port.pid == product_id:
+            logger.info(f"Puerto encontrado: {port.device}")
             return port.device
+    logger.error("No se encontró el puerto serial.")
     return None
 
 def insert_data_to_db(data):
     """Inserta los datos en la base de datos PostgreSQL"""
-    connection = None
-    cursor = None
     try:
+        logger.debug("Intentando conectarse a la base de datos...")
         connection = psycopg2.connect(
             database="sensor_data",
             user="cubesat",
@@ -37,20 +51,19 @@ def insert_data_to_db(data):
             acelx, acely, acelz, girox, giroy, giroz, magx, magy, magz,
             uva, uvb, uvc, uv_temp, cpu_usage, ram_usage, total_ram,
             disk_usage, disk_usage_gb, total_disk_gb, temperature,
-            lat, lon, alt, headmot, roll, pitch, heading, nmea,
-            lat_hp, lon_hp, alt_hp, gps_error, pressure, bmp_temperature, bmp_altitude, timestamp
+            lat, lon, alt, headmot, roll, pitch, heading, NMEA,
+            lat_hp, lon_hp, alt_hp, gps_error, pressure, bmp_temperature, bmp_altitude
         ) VALUES (
             %(acelx)s, %(acely)s, %(acelz)s, %(girox)s, %(giroy)s, %(giroz)s, %(magx)s, %(magy)s, %(magz)s,
             %(uva)s, %(uvb)s, %(uvc)s, %(uv_temp)s, %(cpu_usage)s, %(ram_usage)s, %(total_ram)s,
             %(disk_usage)s, %(disk_usage_gb)s, %(total_disk_gb)s, %(temperature)s,
-            %(lat)s, %(lon)s, %(alt)s, %(headmot)s, %(roll)s, %(pitch)s, %(heading)s, %(nmea)s,
-            %(lat_hp)s, %(lon_hp)s, %(alt_hp)s, %(gps_error)s, %(pressure)s, %(bmp_temperature)s, %(bmp_altitude)s, %(timestamp)s
+            %(lat)s, %(lon)s, %(alt)s, %(headmot)s, %(roll)s, %(pitch)s, %(heading)s, %(NMEA)s,
+            %(lat_hp)s, %(lon_hp)s, %(alt_hp)s, %(gps_error)s, %(pressure)s, %(bmp_temperature)s, %(bmp_altitude)s
         )
         """
 
-        # Preparar los datos para la inserción
-        gps_data = data.get('GPS', [{}])
-        gps_data = gps_data[0] if gps_data else {}
+        # Registro de los datos antes de la inserción
+        logger.debug(f"Datos a insertar: {data}")
 
         # Ejecutar la consulta de inserción
         cursor.execute(insert_query, {
@@ -63,18 +76,18 @@ def insert_data_to_db(data):
             'magx': data.get('IMU', {}).get('MAGX'),
             'magy': data.get('IMU', {}).get('MAGY'),
             'magz': data.get('IMU', {}).get('MAGZ'),
-            'lat': gps_data.get('latitude', None),
-            'lon': gps_data.get('longitude', None),
-            'alt': gps_data.get('altitude', None),
-            'headmot': gps_data.get('heading_of_motion', None),
-            'roll': gps_data.get('roll', None),
-            'pitch': gps_data.get('pitch', None),
-            'heading': gps_data.get('heading', None),
-            'nmea': gps_data.get('nmea_sentence', None),
-            'lat_hp': gps_data.get('high_precision_latitude', None),
-            'lon_hp': gps_data.get('high_precision_longitude', None),
-            'alt_hp': gps_data.get('high_precision_altitude', None),
-            'gps_error': data.get('GPS', [None])[1] if len(data.get('GPS', [])) > 1 else None,
+            'lat': data.get('GPS', {}).get('lat'),
+            'lon': data.get('GPS', {}).get('lon'),
+            'alt': data.get('GPS', {}).get('alt'),
+            'headmot': data.get('GPS', {}).get('headmot'),
+            'roll': data.get('GPS', {}).get('roll'),
+            'pitch': data.get('GPS', {}).get('pitch'),
+            'heading': data.get('GPS', {}).get('heading'),
+            'NMEA': data.get('GPS', {}).get('NMEA'),
+            'lat_hp': data.get('GPS', {}).get('lat_hp'),
+            'lon_hp': data.get('GPS', {}).get('lon_hp'),
+            'alt_hp': data.get('GPS', {}).get('alt_hp'),
+            'gps_error': data.get('GPS', {}).get('gps_error'),
             'pressure': data.get('BMP', {}).get('pressure'),
             'bmp_temperature': data.get('BMP', {}).get('temperature'),
             'bmp_altitude': data.get('BMP', {}).get('altitude'),
@@ -87,25 +100,23 @@ def insert_data_to_db(data):
             'total_ram': data.get('System', {}).get('Total RAM (MB)'),
             'disk_usage': data.get('System', {}).get('Disk Usage (%)'),
             'disk_usage_gb': data.get('System', {}).get('Disk Usage (GB)'),
-            'total_disk_gb': data.get('System', {}).get('Total Disk (GB)'),
-            'temperature': data.get('System', {}).get('Temperature (°C)'),
-            'timestamp': data.get('timestamp')
+            'temperature': data.get('System', {}).get('Temperature (°C)')
         })
 
         # Confirmar los cambios en la base de datos
         connection.commit()
-        logger.info("Datos insertados en la base de datos.")
+        logger.info("Datos insertados correctamente en la base de datos.")
 
-    except (psycopg2.Error, Exception) as error:
+    except Exception as error:
         logger.error(f"Error al insertar en la base de datos: {error}")
     finally:
-        if cursor:
-            cursor.close()
         if connection:
+            cursor.close()
             connection.close()
 
 def main():
     uart_port = None
+    logger.debug("Comenzando búsqueda de dispositivo LoRa...")
     for vid, pid in VID_PID_LIST:
         uart_port = find_serial_port(vid, pid)
         if uart_port:
@@ -127,44 +138,46 @@ def main():
         buffer = ""  # Buffer para almacenar datos recibidos
 
         while True:
+            logger.debug("Esperando a recibir datos...")
             received_message = lora_module.receive_data()
+
             if received_message:
+                logger.debug(f"Datos recibidos: {received_message}")
                 buffer += received_message  # Añadir datos recibidos al buffer
 
                 # Buscar el marcador de inicio y fin en el buffer
                 start_marker = "<<<"
                 end_marker = ">>>"
-
                 start_index = buffer.find(start_marker)
                 end_index = buffer.find(end_marker)
 
                 # Procesar solo si se encuentra un mensaje completo
                 if start_index != -1 and end_index != -1 and end_index > start_index:
+                    logger.debug(f"Mensaje completo encontrado entre {start_index} y {end_index}.")
                     complete_message = buffer[start_index + len(start_marker):end_index]
                     logger.info(f"Mensaje JSON recibido: {complete_message}")
 
+                    # Convertir el mensaje JSON a un diccionario
                     try:
                         data_dict = json.loads(complete_message)
-                        insert_data_to_db(data_dict)
+                        logger.debug(f"Mensaje JSON decodificado: {data_dict}")
                     except json.JSONDecodeError as e:
                         logger.error(f"Error al decodificar JSON: {e}")
-                    except Exception as e:
-                        logger.error(f"Error inesperado al procesar el mensaje JSON: {e}")
+                        buffer = ""  # Reiniciar buffer en caso de error en el JSON
+                        continue
 
+                    # Insertar los datos en la base de datos
+                    insert_data_to_db(data_dict)
+
+                    # Limpiar el buffer hasta el fin del marcador procesado
                     buffer = buffer[end_index + len(end_marker):]
+                else:
+                    logger.debug("No se ha encontrado un mensaje completo aún.")
 
-            time.sleep(0.25)
+            time.sleep(0.5)  # Pequeña pausa para evitar alta carga en CPU
 
-    except KeyboardInterrupt:
-        logger.info("Recepción interrumpida por el usuario.")
     except Exception as e:
-        logger.error(f"Se produjo un error: {e}")
-    finally:
-        if lora_module:
-            lora_module.close()
-        logger.info("Puerto serial cerrado.")
-        time.sleep(1)  # Espera para dar tiempo a que los hilos secundarios se cierren
-
+        logger.error(f"Error al inicializar el módulo LoRa: {e}")
 
 if __name__ == "__main__":
     main()

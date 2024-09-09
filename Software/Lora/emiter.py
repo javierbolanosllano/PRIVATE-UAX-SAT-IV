@@ -36,9 +36,9 @@ def get_all_sensor_data():
     # Obtener datos de los diferentes sensores
     sensor_data['IMU'] = get_IMU_data()         # ICM20948
     sensor_data['UV'] = get_UV_data()           # AS7331
-    #sensor_data['BMP'] = get_BMP_data()         # BMP390
+    sensor_data['BMP'] = get_BMP_data()         # BMP390
     sensor_data['Dallas'] = get_DS18B20_data()  # DS18B20
-    #sensor_data['GPS'] = get_GPS_data()         # GPS NEO M9N
+    sensor_data['GPS'] = get_GPS_data()         # GPS NEO M9N
     sensor_data['System'] = get_system_data()   # Sistema (CPU, RAM...)
 
     return sensor_data

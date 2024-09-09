@@ -46,17 +46,17 @@ def get_GPS_data(baudrate=38400, timeout=1, hwid="1546:01A9", description=None):
 
         # Devuelve los datos como una tupla
         return (
-            geo.lat if geo else None,                   # Latitude
-            geo.lon if geo else None,                   # Longitude
-            geo.height / 1000 if geo else None,         # Altitude
-            geo.headMot if geo else None,               # Heading of Motion
-            veh.roll if veh else None,                  # Roll
-            veh.pitch if veh else None,                 # Pitch
-            veh.heading if veh else None,               # Heading
-            stream_nmea if stream_nmea else None,       # NMEA Sentence
-            hp_geo.latHp if hp_geo else None,           # High Precision Latitude
-            hp_geo.lonHp if hp_geo else None,           # High Precision Longitude
-            hp_geo.heightHp / 1000 if hp_geo else None  # High Precision Altitude
+            geo.lat,                # Latitude
+            geo.lon,                # Longitude
+            geo.height / 1000,      # Altitude
+            geo.headMot,            # Heading of Motion
+            veh.roll,               # Roll
+            veh.pitch,              # Pitch
+            veh.heading,            # Heading
+            stream_nmea,            # NMEA Sentence
+            hp_geo.latHp,           # High Precision Latitude
+            hp_geo.lonHp,           # High Precision Longitude
+            hp_geo.heightHp / 1000  # High Precision Altitude
         )
 
     except Exception as e:
